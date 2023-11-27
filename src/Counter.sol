@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.6.7;
+pragma experimental ABIEncoderV2;
 
 contract Counter {
     uint256 public number;
