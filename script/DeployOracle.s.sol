@@ -12,6 +12,7 @@ abstract contract DeployOracle is Script {
     function setUp() public virtual {}
 
     function run() public virtual {
+        deployer = vm.addr(_deployerPk);
         vm.broadcast();
 
         ChainlinkTWAP chainlinkTwap = new ChainlinkTWAP(
@@ -22,14 +23,14 @@ abstract contract DeployOracle is Script {
             6 // every 12 hours
         );
 
-        UniswapV3Medianizer univ3Twap = UniswapV3Medianizer(
+        UniswapV3Medianizer univ3Twap = new UniswapV3Medianizer(
             0x0dc9877f6024ccf16a470a74176c9260beb83ab6,
             0x03ab458634910AaD20eF5f1C8ee96F1D6ac54919,
             259200,
             0
         );
 
-        ConverterFeed converterFeed = ConverterFeed(
+        ConverterFeed converterFeed = new ConverterFeed(
             address(univ3Twap),
             address(chainlinkTwap),
             1000000000000000000
