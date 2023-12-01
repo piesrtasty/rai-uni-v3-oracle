@@ -243,10 +243,13 @@ contract ChainlinkTWAP is GebMath {
      * @param feeReceiver The address that will receive a SF payout for calling this function
      */
     function updateResult(address feeReceiver) external {
-        require(
-            address(rewardRelayer) != address(0),
-            "ChainlinkTWAP/null-reward-relayer"
-        );
+        //
+        // Temporarily disable reward relayer check for mainnet testing
+        //
+        // require(
+        //     address(rewardRelayer) != address(0),
+        //     "ChainlinkTWAP/null-reward-relayer"
+        // );
 
         uint256 elapsedTime = (chainlinkObservations.length == 0)
             ? periodSize

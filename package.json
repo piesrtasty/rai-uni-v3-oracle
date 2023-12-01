@@ -1,0 +1,20 @@
+{
+  "name": "rai-univ3-oracle",
+  "version": "0.1.0",
+  "description": "RAI Uni V3 Oracle",
+  "homepage": "https://github.com/hai-on-op/governance#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hai-on-op/governance.git"
+  },
+  "license": "MIT",
+  "author": "pesrtasty",
+  "contributors": [
+    "piesrtasty (https://github.com/piesrtasty)"
+  ],
+  "scripts": {
+    "deploy:oracle:goerli": "bash -c 'source .env && forge script DeployOracleGoerli --with-gas-price 2000000000 -vvvvv --rpc-url $GOERLI_RPC --broadcast --private-key $GOERLI_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'",
+    "deploy:oracle:mainnet": "bash -c 'source .env && forge script DeployOracleMainnet --rpc-url $MAINNET_RPC --broadcast --private-key $MAINNET_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'"
+  },
+  "dependencies": {}
+}
