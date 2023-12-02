@@ -1,51 +1,59 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.6.7;
 pragma experimental ABIEncoderV2;
 
 import {Script} from "forge-std/Script.sol";
-import {ChainlinkTWAP} from "../src/ChainlinkTWAP.sol";
+import {Params} from "@script/Params.s.sol";
+import {GoerliParams} from "@script/GoerliParams.s.sol";
+import {MainnetParams} from "@script/MainnetParams.s.sol";
+import {ChainlinkTWAP} from "@contracts/ChainlinkTWAP.sol";
 import {ConverterFeed} from "geb-uniswap-median/UniV3ChainlinkTWAPConverterFeed.sol";
 import {UniswapV3Medianizer} from "geb-uniswap-median/UniswapV3Medianizer.sol";
 
-abstract contract DeployOracle is Script {
-    function setUp() public virtual {}
+abstract contract DeployOracle is Script, Params {
+    uint256 internal _deployerPk;
+    // --- Helpers ---
+    uint256 public chainId;
+    address public deployer;
 
     function run() public virtual {
+        _getEnvironmentParams();
+
         deployer = vm.addr(_deployerPk);
-        vm.broadcast();
+        vm.startBroadcast(deployer);
 
         ChainlinkTWAP chainlinkTwap = new ChainlinkTWAP(
-            0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419,
-            259200, // 3 days
-            518400, // 6 days
-            10000000000,
-            6 // every 12 hours
+            chainlinkAggregator,
+            chainlinkWindowSize,
+            maxWindowSize,
+            multiplier,
+            granularity
         );
 
         UniswapV3Medianizer univ3Twap = new UniswapV3Medianizer(
-            0x0dc9877f6024ccf16a470a74176c9260beb83ab6,
-            0x03ab458634910AaD20eF5f1C8ee96F1D6ac54919,
-            259200,
-            0
+            uniswapPool,
+            targetToken,
+            uniWindowSize,
+            minimumLiquidity
         );
 
-        ConverterFeed converterFeed = new ConverterFeed(
+        new ConverterFeed(
             address(univ3Twap),
             address(chainlinkTwap),
-            1000000000000000000
+            scalingFactor
         );
     }
 }
 
-contract DeployOracleGoerli is DeployOracle {
-    function setUp() public override {
+contract DeployOracleGoerli is GoerliParams, DeployOracle {
+    function setUp() public virtual {
         _deployerPk = uint256(vm.envBytes32("GOERLI_DEPLOYER_PK"));
         chainId = 5;
     }
 }
 
-contract DeployOracleMainnet is MainnetParams, DeployGovernance {
+contract DeployOracleMainnet is MainnetParams, DeployOracle {
     function setUp() public virtual {
         _deployerPk = uint256(vm.envBytes32("MAINNET_DEPLOYER_PK"));
         chainId = 1;
