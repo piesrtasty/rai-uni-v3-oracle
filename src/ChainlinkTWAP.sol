@@ -1,11 +1,158 @@
 pragma solidity 0.6.7;
 
-import "geb-treasury-reimbursement/math/GebMath.sol";
+contract GebMath {
+    uint256 public constant RAY = 10 ** 27;
+    uint256 public constant WAD = 10 ** 18;
 
-import "./link/AggregatorInterface.sol";
+    function ray(uint x) public pure returns (uint z) {
+        z = multiply(x, 10 ** 9);
+    }
+
+    function rad(uint x) public pure returns (uint z) {
+        z = multiply(x, 10 ** 27);
+    }
+
+    function minimum(uint x, uint y) public pure returns (uint z) {
+        z = (x <= y) ? x : y;
+    }
+
+    function addition(uint x, uint y) public pure returns (uint z) {
+        z = x + y;
+        require(z >= x, "uint-uint-add-overflow");
+    }
+
+    function subtract(uint x, uint y) public pure returns (uint z) {
+        z = x - y;
+        require(z <= x, "uint-uint-sub-underflow");
+    }
+
+    function multiply(uint x, uint y) public pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, "uint-uint-mul-overflow");
+    }
+
+    function rmultiply(uint x, uint y) public pure returns (uint z) {
+        z = multiply(x, y) / RAY;
+    }
+
+    function rdivide(uint x, uint y) public pure returns (uint z) {
+        z = multiply(x, RAY) / y;
+    }
+
+    function wdivide(uint x, uint y) public pure returns (uint z) {
+        z = multiply(x, WAD) / y;
+    }
+
+    function wmultiply(uint x, uint y) public pure returns (uint z) {
+        z = multiply(x, y) / WAD;
+    }
+
+    function rpower(uint x, uint n, uint base) public pure returns (uint z) {
+        assembly {
+            switch x
+            case 0 {
+                switch n
+                case 0 {
+                    z := base
+                }
+                default {
+                    z := 0
+                }
+            }
+            default {
+                switch mod(n, 2)
+                case 0 {
+                    z := base
+                }
+                default {
+                    z := x
+                }
+                let half := div(base, 2) // for rounding.
+                for {
+                    n := div(n, 2)
+                } n {
+                    n := div(n, 2)
+                } {
+                    let xx := mul(x, x)
+                    if iszero(eq(div(xx, x), x)) {
+                        revert(0, 0)
+                    }
+                    let xxRound := add(xx, half)
+                    if lt(xxRound, xx) {
+                        revert(0, 0)
+                    }
+                    x := div(xxRound, base)
+                    if mod(n, 2) {
+                        let zx := mul(z, x)
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) {
+                            revert(0, 0)
+                        }
+                        let zxRound := add(zx, half)
+                        if lt(zxRound, zx) {
+                            revert(0, 0)
+                        }
+                        z := div(zxRound, base)
+                    }
+                }
+            }
+        }
+    }
+}
+
+interface AggregatorInterface {
+    event AnswerUpdated(
+        int256 indexed current,
+        uint256 indexed roundId,
+        uint256 timestamp
+    );
+    event NewRound(
+        uint256 indexed roundId,
+        address indexed startedBy,
+        uint256 startedAt
+    );
+
+    function latestAnswer() external view returns (int256);
+
+    function latestTimestamp() external view returns (uint256);
+
+    function latestRound() external view returns (uint256);
+
+    function getAnswer(uint256 roundId) external view returns (int256);
+
+    function getTimestamp(uint256 roundId) external view returns (uint256);
+
+    // post-Historic
+
+    function decimals() external view returns (uint8);
+
+    function getRoundData(
+        uint256 _roundId
+    )
+        external
+        view
+        returns (
+            uint256 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint256 answeredInRound
+        );
+
+    function latestRoundData()
+        external
+        view
+        returns (
+            uint256 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint256 answeredInRound
+        );
+}
 
 abstract contract IncreasingRewardRelayerLike {
     function reimburseCaller(address) external virtual;
+
+    function refundRequestor() external view virtual returns (address);
 }
 
 contract ChainlinkTWAP is GebMath {
@@ -67,13 +214,13 @@ contract ChainlinkTWAP is GebMath {
     // Total number of updates
     uint256 public updates;
     // Multiplier for the Chainlink result
-    uint8 public multiplier = 1;
+    uint256 public multiplier = 1;
     // Number of updates in the window
     uint8 public granularity;
 
     // You want to change these every deployment
     uint256 public staleThreshold = 3;
-    bytes32 public symbol = "eth-usd";
+    bytes32 public symbol = "ETH-USD-TWAP";
 
     ChainlinkObservation[] public chainlinkObservations;
 
@@ -94,7 +241,7 @@ contract ChainlinkTWAP is GebMath {
         address aggregator,
         uint256 windowSize_,
         uint256 maxWindowSize_,
-        uint8 multiplier_,
+        uint256 multiplier_,
         uint8 granularity_
     ) public {
         require(aggregator != address(0), "ChainlinkTWAP/null-aggregator");
@@ -243,14 +390,6 @@ contract ChainlinkTWAP is GebMath {
      * @param feeReceiver The address that will receive a SF payout for calling this function
      */
     function updateResult(address feeReceiver) external {
-        //
-        // Temporarily disable reward relayer check for mainnet testing
-        //
-        // require(
-        //     address(rewardRelayer) != address(0),
-        //     "ChainlinkTWAP/null-reward-relayer"
-        // );
-
         uint256 elapsedTime = (chainlinkObservations.length == 0)
             ? periodSize
             : subtract(
@@ -300,13 +439,18 @@ contract ChainlinkTWAP is GebMath {
 
         emit UpdateResult(medianResult);
 
-        // Get final fee receiver
-        address finalFeeReceiver = (feeReceiver == address(0))
-            ? msg.sender
-            : feeReceiver;
+        if (
+            address(rewardRelayer) != address(0) &&
+            address(this) == address(rewardRelayer.refundRequestor())
+        ) {
+            // Get final fee receiver
+            address finalFeeReceiver = (feeReceiver == address(0))
+                ? msg.sender
+                : feeReceiver;
 
-        // Send the reward
-        rewardRelayer.reimburseCaller(finalFeeReceiver);
+            // Send the reward
+            rewardRelayer.reimburseCaller(finalFeeReceiver);
+        }
     }
 
     /**

@@ -4,12 +4,19 @@ pragma solidity ^0.6.7;
 pragma experimental ABIEncoderV2;
 
 import {Script} from "forge-std/Script.sol";
+import "forge-std/console.sol";
 import {Params} from "@script/Params.s.sol";
 import {GoerliParams} from "@script/GoerliParams.s.sol";
 import {MainnetParams} from "@script/MainnetParams.s.sol";
 import {ChainlinkTWAP} from "@contracts/ChainlinkTWAP.sol";
 import {ConverterFeed} from "geb-uniswap-median/UniV3ChainlinkTWAPConverterFeed.sol";
 import {UniswapV3Medianizer} from "geb-uniswap-median/UniswapV3Medianizer.sol";
+
+abstract contract IncreasingRewardRelayerLike {
+    function reimburseCaller(address) external virtual;
+
+    function refundRequestor() external view virtual returns (address);
+}
 
 abstract contract DeployOracle is Script, Params {
     uint256 internal _deployerPk;

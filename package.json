@@ -13,8 +13,10 @@
     "piesrtasty (https://github.com/piesrtasty)"
   ],
   "scripts": {
-    "deploy:oracle:goerli": "bash -c 'source .env && forge script DeployOracleGoerli --with-gas-price 2000000000 -vvvvv --rpc-url $GOERLI_RPC --broadcast --private-key $GOERLI_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'",
-    "deploy:oracle:mainnet": "bash -c 'source .env && forge script DeployOracleMainnet --rpc-url $MAINNET_RPC --broadcast --private-key $MAINNET_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'"
+    "deploy:oracle:goerli": "bash -c 'source .env && forge script DeployOracleGoerli --with-gas-price 2000000000 -vvvvv --rpc-url $GOERLI_RPC --private-key $GOERLI_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'",
+    "deploy:oracle:goerli:broadcast": "bash -c 'source .env && forge script DeployOracleGoerli --with-gas-price 2000000000 -vvvvv --rpc-url $GOERLI_RPC --broadcast --slow --private-key $GOERLI_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'",
+    "deploy:oracle:mainnet": "bash -c 'source .env && forge script DeployOracleMainnet --rpc-url $MAINNET_RPC --private-key $MAINNET_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'-vvv",
+    "deploy:oracle:mainnet:broadcast": "bash -c 'source .env && forge script DeployOracleMainnet --rpc-url $MAINNET_RPC --broadcast --slow --private-key $MAINNET_DEPLOYER_PK --verify --etherscan-api-key $ETHERSCAN_API_KEY'"
   },
   "dependencies": {}
 }
